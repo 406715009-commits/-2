@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>โยงเส้น – Nombor Ratus Dan Ribu</title>
+<style>
+:root{--bg:#fff8e7;--ink:#26324a;--card:#fff;--line:#26324a;--blue:#3a86ff;--green:#2ab37a;--red:#e8505b;--yel:#ffbe0b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b2236;--ink:#fff4d6;--card:#2a3452;--line:#fff4d6}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Mali","Sarabun","Noto Sans Thai",system-ui,sans-serif;font-size:20px;line-height:1.5}
+main{max-width:640px;margin:0 auto;padding:14px}
+header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+h1{font-size:22px;margin:0}
+.stars{font-size:24px;font-weight:700;white-space:nowrap}
+.card{background:var(--card);border:3px solid var(--line);border-radius:22px;padding:16px;margin:12px 0;box-shadow:0 5px 0 var(--line)}
+button{font:inherit;font-weight:700;color:#26324a;background:var(--yel);border:3px solid var(--line);border-radius:18px;padding:12px 16px;min-height:56px;cursor:pointer;box-shadow:0 4px 0 var(--line);touch-action:manipulation}
+button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line)}
+button:focus-visible{outline:4px solid var(--blue);outline-offset:2px}
+.lvl{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.lvl button{flex:1;min-width:130px;background:#fff;font-size:17px}
+.lvl button.on{background:var(--yel)}
+#board{position:relative;display:flex;justify-content:space-between;gap:70px;padding:8px 0}
+.col{display:flex;flex-direction:column;gap:14px;flex:1;position:relative;z-index:2}
+.it{background:#fff;color:#26324a;min-height:62px;font-size:22px;padding:8px 10px;text-align:center;width:100%}
+.L .it{background:#e8f1ff}.R .it{background:#ffe6e8;font-size:19px}
+.it.sel{background:var(--yel)!important;transform:scale(1.05)}
+.it.done{background:#9be8c4!important}
+.it.bad{background:#ffb3b8!important}
+svg{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.fb{min-height:64px;text-align:center;font-weight:700;margin-top:8px}
+.hint{background:#e8f1ff;color:#26324a;border-radius:14px;padding:8px;font-size:17px;font-weight:400}
+.row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.tip{text-align:center;font-size:18px;margin:0 0 6px}
+</style>
+</head>
+<body>
+<main>
+<header><h1>🔗 โยงเส้น: เลข ↔ คำมลายู</h1><div class="stars" id="stars">⭐ 0</div></header>
+<div class="card">
+<div class="lvl" id="lvl"></div>
+<p class="tip">แตะเลขด้านซ้าย แล้วแตะคำมลายูด้านขวา เพื่อโยงเส้น (แตะเส้นเดิมซ้ำเพื่อยกเลิก)</p>
+<div id="board"><svg id="sv"></svg><div class="col L" id="L"></div><div class="col R" id="R"></div></div>
+<div class="fb" id="fb"></div>
+<div class="row"><button id="chk">✅ ตรวจคำตอบ</button><button id="nw" style="background:#fff">🔁 ชุดใหม่</button></div>
+</div>
+</main>
+<script>
+var N={1:"satu",2:"dua",3:"tiga",4:"empat",5:"lima",6:"enam",7:"tujuh",8:"lapan",9:"sembilan"};
+function my(n){var k=Math.floor(n/1000),c=Math.floor(n%1000/100),s="";
+ if(k)s=(k==1?"seribu":N[k]+" ribu");
+ if(c)s+=(s?" ":"")+(c==1?"seratus":N[c]+" ratus");return s}
+var LV=[["🟥 หลักร้อย","h"],["🟦 หลักพัน","t"],["🌈 ผสม","m"]],lv=0,stars=0,items=[],links={},selL=null,got=false;
+var $=function(i){return document.getElementById(i)};
+function shuf(a){return a.slice().sort(function(){return Math.random()-.5})}
+function pickNums(){var s={},out=[];
+ while(out.length<4){var n;
+  if(LV[lv][1]=="h")n=(Math.floor(Math.random()*9)+1)*100;
+  else if(LV[lv][1]=="t")n=(Math.floor(Math.random()*9)+1)*1000;
+  else n=Math.random()<.5?(Math.floor(Math.random()*9)+1)*100:(Math.floor(Math.random()*4)+1)*1000+(Math.floor(Math.random()*9)+1)*100;
+  if(!s[n]){s[n]=1;out.push(n)}}
+ return out}
+function build(){
+ $("lvl").innerHTML="";
+ LV.forEach(function(l,i){var b=document.createElement("button");b.textContent=l[0];b.className=i==lv?"on":"";b.onclick=function(){lv=i;build()};$("lvl").appendChild(b)});
+ items=pickNums();links={};selL=null;got=false;$("fb").innerHTML="";
+ var L=$("L"),R=$("R");L.innerHTML="";R.innerHTML="";
+ items.forEach(function(n,i){var b=document.createElement("button");b.className="it";b.id="l"+i;b.textContent=n.toLocaleString("en-US");b.onclick=function(){pickL(i)};L.appendChild(b)});
+ shuf(items.map(function(n,i){return i})).forEach(function(i){var b=document.createElement("button");b.className="it";b.id="r"+i;b.textContent=my(items[i]);b.onclick=function(){pickR(i)};R.appendChild(b)});
+ draw()}
+function pickL(i){if(got)return;
+ if(links[i]!==undefined){delete links[i];selL=null;mark();draw();return}
+ selL=i;mark()}
+function pickR(j){if(got||selL===null)return;
+ for(var k in links)if(links[k]===j)delete links[k];
+ links[selL]=j;selL=null;mark();draw()}
+function mark(){items.forEach(function(n,i){$("l"+i).className="it"+(selL===i?" sel":"");$("r"+i).className="it"})}
+function pt(el,side){var b=$("board").getBoundingClientRect(),r=el.getBoundingClientRect();
+ return [(side=="l"?r.right:r.left)-b.left,r.top+r.height/2-b.top]}
+function draw(res){var h="";
+ for(var i in links){var a=pt($("l"+i),"l"),b=pt($("r"+links[i]),"r");
+  var c=res?(res[i]?"#2ab37a":"#e8505b"):"#3a86ff";
+  h+='<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'" stroke="'+c+'" stroke-width="6" stroke-linecap="round"/>'}
+ $("sv").innerHTML=h}
+$("chk").onclick=function(){
+ if(got)return;var n=Object.keys(links).length;
+ if(n<items.length){$("fb").innerHTML="โยงให้ครบ "+items.length+" เส้นก่อนนะ 🙂";return}
+ var res={},ok=0,why="";
+ items.forEach(function(v,i){var good=links[i]==i;res[i]=good;if(good)ok++;else why=why||(v+" อ่านว่า <b>"+my(v)+"</b>");
+  $("l"+i).className="it "+(good?"done":"bad");$("r"+links[i]).className="it "+(good?"done":"bad")});
+ draw(res);
+ if(ok==items.length){got=true;stars+=3;$("stars").textContent="⭐ "+stars;$("fb").innerHTML="สุดยอด! ถูกครบทุกเส้น 🎉 +3 ดาว"}
+ else{$("fb").innerHTML="ถูก "+ok+" จาก "+items.length+" เส้น 💪<div class='hint'>💡 "+why+"<br>แตะเส้นที่ผิดเพื่อโยงใหม่ แล้วตรวจอีกครั้ง</div>";
+  setTimeout(function(){items.forEach(function(v,i){if(!res[i]){delete links[i]}});mark();items.forEach(function(v,i){if(res[i]){$("l"+i).className="it done";$("r"+i).className="it done"}});draw()},1600)}}
+$("nw").onclick=build;
+window.addEventListener("resize",function(){draw()});
+build();
+</script>
+</body>
+</html>
